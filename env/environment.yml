@@ -1,0 +1,7 @@
+name: comp0197-cw2-pt
+
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - -r requirements.txt

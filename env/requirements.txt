@@ -1,0 +1,4 @@
+# Add other packages if needed
+matplotlib
+torch==2.5.0
+torchvision
