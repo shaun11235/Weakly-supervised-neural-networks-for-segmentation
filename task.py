@@ -46,14 +46,14 @@ def returnCAM(feature_conv, weight_softmax, class_idx, img_size):
     cam_img = np.uint8(255 * cam)
     return Image.fromarray(cam_img).resize(img_size, resample=Image.BILINEAR), cam
 
-# ========== Main Code ==========
 
+# ========== Main Code ==========
 # 获取当前代码所在目录
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # 配置路径（均使用第一部分的路径）
-image_dir = os.path.join(current_dir, "dataset", "oxford-iiit-pet", "images", "images")
-list_txt = os.path.join(current_dir, "dataset", "oxford-iiit-pet", "annotations", "annotations", "list.txt")
+image_dir = os.path.join(current_dir, "dataset", "oxford-iiit-pet", "images")
+list_txt = os.path.join(current_dir, "dataset", "oxford-iiit-pet", "annotations", "list.txt")
 model_save_path = os.path.join(current_dir, "results", "pth", "resnet_pet.pth")
 image_path = os.path.join(current_dir, "dataset", "test.jpg")
 output_cam_path = os.path.join(current_dir, "results", "plots", "CAM.jpg")
