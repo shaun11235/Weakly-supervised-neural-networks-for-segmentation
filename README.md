@@ -48,9 +48,11 @@ Frequently pull from the remote repository to ensure your local branch is up-to-
 Use comments and update the README file as needed to explain any non-obvious parts of your code or new features. Good documentation is essential for team collaboration and future maintenance.
 
 ## Dataset
-Makesure that the dataset file paths look like this  
+Make sure that the dataset file paths look like this:  
 `dataset/`  
 `└── oxford-iiit-pet/`  
 `    ├── annotations/`  
 `    ├── images/`  
 `    └── test.jpg`  
+
+Do not push the dataset to GitHub.  

@@ -9,8 +9,8 @@ from PIL import Image
 import matplotlib.cm as cm
 import numpy as np
 
-# ========== Class and Function Definitions ==========
 
+# ========== Class and Function Definitions ==========
 class PetDataset(torch.utils.data.Dataset):
     def __init__(self, image_folder, label_dict, transform=None):
         self.image_folder = image_folder
@@ -31,12 +31,13 @@ class PetDataset(torch.utils.data.Dataset):
         return image, label
 
 
-# 用于提取最后卷积层特征的hook函数
+# Hook function to extract features from the final convolution layer
 def hook_feature(module, input, output):
     features_blobs.append(output.detach().numpy())
 
 
-# 生成CAM热图函数（使用传入的图像尺寸进行重采样）
+# Function to generate the CAM heatmap
+# (using the provided image size for resampling)
 def returnCAM(feature_conv, weight_softmax, class_idx, img_size):
     bz, nc, h, w = feature_conv.shape
     cam = weight_softmax[class_idx].dot(feature_conv.reshape((nc, h * w)))
@@ -44,16 +45,18 @@ def returnCAM(feature_conv, weight_softmax, class_idx, img_size):
     cam = cam - np.min(cam)
     cam = cam / np.max(cam)
     cam_img = np.uint8(255 * cam)
-    return Image.fromarray(cam_img).resize(img_size, resample=Image.BILINEAR), cam
+    return (Image.fromarray(cam_img).resize(img_size, resample=Image.BILINEAR),
+            cam)
 
 
 # ========== Main Code ==========
-# 获取当前代码所在目录
+# Get the directory of the current script
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# 配置路径（均使用第一部分的路径）
+# Configure paths (using the paths from the first section)
 image_dir = os.path.join(current_dir, "dataset", "oxford-iiit-pet", "images")
-list_txt = os.path.join(current_dir, "dataset", "oxford-iiit-pet", "annotations", "list.txt")
+list_txt = os.path.join(current_dir, "dataset", "oxford-iiit-pet",
+                        "annotations", "list.txt")
 model_save_path = os.path.join(current_dir, "results", "pth", "resnet_pet.pth")
 image_path = os.path.join(current_dir, "dataset", "test.jpg")
 output_cam_path = os.path.join(current_dir, "results", "plots", "CAM.jpg")
@@ -63,18 +66,18 @@ batch_size = 16
 epochs = 1
 lr = 1e-3
 
-# Step 1: 构造标签映射表
+# Step 1: Construct label mapping
 with open(list_txt, "r") as f:
-    lines = f.readlines()[6:]  # 前6行是注释
+    lines = f.readlines()[6:]  # The first 6 lines are comments
 
 img_labels = {}
-for line in lines[:50]:  # 仅使用前50个样本（测试版）
+for line in lines[:50]:  # Use only the first 50 samples (test version)
     parts = line.strip().split()
     img_name = parts[0] + ".jpg"
     class_id = int(parts[1]) - 1
     img_labels[img_name] = class_id
 
-# Step 2: 数据增强与加载
+# Step 2: Data augmentation and loading
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -82,10 +85,10 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 dataset = PetDataset(image_dir, img_labels, transform)
-dataset = Subset(dataset, list(range(50)))  # 仅使用前50张图像测试
+dataset = Subset(dataset, list(range(50)))  # Use only 50 images for testing
 loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-# Step 3: 定义模型并训练
+# Step 3: Define and train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = models.resnet18(pretrained=True)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
@@ -110,7 +113,7 @@ for epoch in range(epochs):
 torch.save(model.state_dict(), model_save_path)
 print("Model saved to", model_save_path)
 
-# Step 4: 加载模型并生成CAM
+# Step 4: Load model and generate CAM
 model.eval()
 model.load_state_dict(torch.load(model_save_path, map_location="cpu"))
 
@@ -123,13 +126,15 @@ img_tensor = transform(img_pil).unsqueeze(0)
 logits = model(img_tensor)
 probs = F.softmax(logits, dim=1).data.squeeze()
 class_idx = torch.argmax(probs).item()
-print(f"Predicted class index: {class_idx}, probability: {probs[class_idx]:.4f}")
+print(f"Predicted class index: {class_idx}, "
+      f"probability: {probs[class_idx]:.4f}")
 
 params = list(model.parameters())
 weight_softmax = params[-2].detach().numpy()
 weight_softmax = np.squeeze(weight_softmax)
 
-cam_img_pil, cam_array = returnCAM(features_blobs[0], weight_softmax, class_idx, img_pil.size)
+cam_img_pil, cam_array = returnCAM(features_blobs[0], weight_softmax,
+                                   class_idx, img_pil.size)
 
 jet = cm.get_cmap("jet")
 cam_color = jet(cam_array)[:, :, :3]
