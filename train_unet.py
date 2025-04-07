@@ -131,7 +131,6 @@ for i in range(num_samples):
     image = image * std[:, None, None] + mean[:, None, None]
     image = torch.clamp(image, 0, 1)
 
-    # 可视化
     axes[i, 0].imshow(image.cpu().squeeze(0).permute(1, 2, 0))
     axes[i, 0].set_title(f'Input Image {i + 1}')
     axes[i, 0].axis('off')
