@@ -111,7 +111,7 @@ with torch.no_grad():
         total_miou += miou
         count += 1
 avg_miou = total_miou / count
-print(f"测试集平均 mIoU: {avg_miou:.4f}")
+print(f"average mIoU: {avg_miou:.4f}")
 
 # ============== Visualisation of the results of the first five predictions ==============
 num_samples = 5
