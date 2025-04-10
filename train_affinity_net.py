@@ -8,10 +8,9 @@ from PIL import Image
 import numpy as np
 
 
-#用二值掩码训练affinitynet
-image_dir = "dataset/oxford-iiit-pet/images"#原图路径
-binary_mask_dir = "binary_mask"#二值掩码所在路径
-model_save_path = "affinitynet.pth"#模型保存路径
+image_dir = r"dataset/oxford-iiit-pet/images"
+binary_mask_dir = r"results/binary_mask"
+model_save_path = r"results/pth/affinitynet.pth"
 batch_size = 4
 num_epochs = 30
 lr = 1e-4

@@ -8,12 +8,11 @@ from train_affinity_net import AffinityNet
 from scipy import ndimage
 
 
-image_dir = r"dataset/oxford-iiit-pet\images"#原图路径
-binary_mask_dir = "binary_mask"#二值掩码路径
-output_dir = "refined_masks"#扩散后最终掩码存放的路径
-model_path = "affinitynet.pth"#affinitynet模型存放的路径
+image_dir = r"dataset/oxford-iiit-pet\images"
+binary_mask_dir = r'results/binary_mask'
+output_dir = r"results/refined_masks"
+model_path = r"results/pth/affinitynet.pth"
 os.makedirs(output_dir, exist_ok=True)
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = AffinityNet().to(device)
