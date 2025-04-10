@@ -92,7 +92,7 @@ num_epochs = 100
 start_time = time.time()
 
 # =============== Train the model ==================
-fit_sgd(model, train_loader, optimizer, criterion, num_epochs, device)
+fit_sgd(model, train_loader, test_loader, optimizer, criterion, num_epochs, device)
 end_time = time.time()
 
 elapsed_time = end_time - start_time
@@ -146,3 +146,36 @@ for i in range(num_samples):
 plt.tight_layout()
 plt.savefig("UNET.png")
 plt.show()
+
+# ============== Visualisation of the results of the 170 predictions ==============
+target_identifier = "american_pit_bull_terrier_170"
+target_index = None
+
+for idx, fname in enumerate(train_dataset.image_files):
+    if target_identifier in fname:
+        target_index = idx
+        break
+
+if target_index is None:
+    print(f" didn t find'{target_identifier}' ")
+else:
+    
+    image, mask = train_dataset[target_index]
+    image_tensor = image.unsqueeze(0).to(device)  
+
+    
+    model.eval()
+    with torch.no_grad():
+        output = model(image_tensor)  
+
+   
+    pred = output.argmax(dim=1).squeeze(0).cpu().numpy()
+
+   
+    print("170 image：")
+    print(pred)
+
+    
+    save_filename = f"{target_identifier}_prediction.txt"
+    np.savetxt(save_filename, pred, fmt='%d')
+    print(f"save 170 {save_filename}")
