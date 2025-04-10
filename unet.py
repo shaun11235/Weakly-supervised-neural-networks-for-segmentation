@@ -95,35 +95,38 @@ def compute_miou(pred, target, num_classes=2):
     return sum(ious) / num_classes
 
 # ================== sgd =======================
-def fit_sgd(model, train_loader, optimizer, criterion, num_epochs, device):
+def fit_sgd(model, train_loader, test_loader,optimizer, criterion, num_epochs, device):
 
     model.to(device)
-    model.train()
-
+    
     for epoch in range(num_epochs):
+        
+        model.train()
         running_loss = 0.0
-        running_miou = 0.0
-        for i, (inputs, labels) in enumerate(train_loader):
+        
+        for inputs, labels in train_loader:
             inputs = inputs.to(device)
             labels = labels.to(device)
-
             optimizer.zero_grad()
 
             outputs = model(inputs)
-
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
 
             running_loss += loss.item()
-
-            preds = outputs.argmax(dim=1)
-            miou = compute_miou(preds, labels, num_classes=2)
-            running_miou += miou
-
-            print(
-                f"Epoch [{epoch + 1}/{num_epochs}] Iteration [{i + 1}/{len(train_loader)}] Loss: {loss.item():.4f} mIoU: {miou:.4f}")
-
-        avg_loss = running_loss / len(train_loader)
-        avg_miou = running_miou / len(train_loader)
-        print(f"Epoch [{epoch + 1}/{num_epochs}] Average Loss: {avg_loss:.4f} Average mIoU: {avg_miou:.4f}")
+        
+        if (epoch + 1) % 10 == 0:
+            model.eval()
+            total_miou = 0.0
+            count = 0
+            with torch.no_grad():
+                for images, labels in test_loader:
+                    images = images.to(device)
+                    labels = labels.to(device)
+                    outputs = model(images)
+                    preds = outputs.argmax(dim=1)
+                    total_miou += compute_miou(preds, labels, num_classes=2)
+                    count += 1
+            avg_miou = total_miou / count if count > 0 else 0.0
+            print(f"Epoch [{epoch + 1}/{num_epochs}] Test mIoU: {avg_miou:.4f}")
