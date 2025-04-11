@@ -4,10 +4,12 @@ from PIL import Image
 import matplotlib.cm as cm
 import xml.etree.ElementTree as ET
 
-image_dir = "../oxford-iiit-pet/images"  # Relative path to image folder
-xml_dir = "../oxford-iiit-pet/annotations/xmls"  # Relative path to XML annotation folder
-bbox_txt = "../trained_models/trimaps_bbox.txt"  # Output path for generated bbox file
-output_dir = "../plots/bbox_heatmaps"  # Output path for heatmap images
+script_dir = os.path.dirname(os.path.abspath(__file__))
+image_dir = os.path.join(script_dir, "oxford-iiit-pet", "images")
+xml_dir = os.path.join(script_dir, "oxford-iiit-pet", "annotations", "xmls")
+bbox_txt = os.path.join(script_dir, "trained_models", "trimaps_bbox.txt")
+output_dir = os.path.join(script_dir, "plots", "bbox_heatmaps")
+
 os.makedirs(output_dir, exist_ok=True)
 
 bbox_lines = []
