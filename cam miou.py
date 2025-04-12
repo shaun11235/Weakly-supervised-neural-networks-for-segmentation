@@ -4,7 +4,7 @@ from PIL import Image
 
 def compute_iou(pred_mask, gt_mask):
     # 使用动态阈值：前景是 > 最大值的20%
-    pred_bin = pred_mask > (0.5 * pred_mask.max())
+    pred_bin = pred_mask > (0.2 * pred_mask.max())
     gt_bin = gt_mask > 128  # Ground Truth 通常是二值图：255 vs 0
 
     intersection = np.logical_and(pred_bin, gt_bin).sum()
