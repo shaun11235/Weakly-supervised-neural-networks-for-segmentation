@@ -9,7 +9,7 @@ image_dir = os.path.join(script_dir, "oxford-iiit-pet", "images")
 xml_dir = os.path.join(script_dir, "oxford-iiit-pet", "annotations", "xmls")
 bbox_txt = os.path.join(script_dir, "trained_model", "trimaps_bbox.txt")
 output_dir = os.path.join(script_dir, "plots", "bbox_heatmaps")
-
+os.makedirs(output_dir, exist_ok=True)
 
 bbox_lines = []
 
