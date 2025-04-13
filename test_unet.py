@@ -58,37 +58,61 @@ with torch.no_grad():
 avg_miou = total_miou / count
 print(f"average mIoU: {avg_miou:.4f}")
 
-# =============== Visualisation ==================
-num_samples = 5
-fig, axes = plt.subplots(num_samples, 3, figsize=(12, 12))
+# =============== Visualise the first 5 images ==================
+import re
 
-for i in range(num_samples):
-    image, mask = test_dataset[i]
-    image = image.unsqueeze(0).to(device)
+def natural_key(filename):
+    return [int(s) if s.isdigit() else s.lower() for s in re.split(r'(\d+)', filename)]
+valid_ext = ('.jpg', '.jpeg', '.png')
+all_image_files = sorted(
+    [f for f in os.listdir('./images') if f.lower().endswith(valid_ext)],
+    key=natural_key
+)
+first5_filenames = all_image_files[:5]
+fig, axes = plt.subplots(5, 3, figsize=(12, 12))
+
+for i, filename in enumerate(first5_filenames):
+    image_path = os.path.join("./images", filename)
+    base_name = os.path.splitext(filename)[0]
+    mask_path = os.path.join("./annotations/trimaps", base_name + ".png")
+
+
+    image = Image.open(image_path).convert("RGB")
+    if not os.path.exists(mask_path):
+        print(f"[WARNING] Mask not found for {filename}, skipping...")
+        continue
+    mask = Image.open(mask_path)
+    mask_np = np.array(mask)
+    mask_bin = (mask_np > 1).astype(np.uint8)
+    mask_pil = Image.fromarray(mask_bin * 255)
+
+    image_tensor = transform(image).unsqueeze(0).to(device)
+    mask_tensor = mask_transform(mask_pil).squeeze(0).long()
 
     with torch.no_grad():
-        output = model(image)
-
-    pred = output.argmax(dim=1).cpu().numpy()[0]
-    mask = mask.numpy()
+        output = model(image_tensor)
+        pred = output.argmax(dim=1).squeeze(0).cpu().numpy()
 
     mean = torch.tensor([0.485, 0.456, 0.406])
     std = torch.tensor([0.229, 0.224, 0.225])
-    image = image * std[:, None, None] + mean[:, None, None]
-    image = torch.clamp(image, 0, 1)
+    image_vis = image_tensor[0].cpu() * std[:, None, None] + mean[:, None, None]
+    image_vis = torch.clamp(image_vis, 0, 1).permute(1, 2, 0).numpy()
 
-    axes[i, 0].imshow(image.cpu().squeeze(0).permute(1, 2, 0))
-    axes[i, 0].set_title(f'Input Image {i + 1}')
-    axes[i, 0].axis('off')
+    axes[i, 0].imshow(image_vis)
+    axes[i, 0].set_title(f"Image: {filename}")
+    axes[i, 0].axis("off")
 
-    axes[i, 1].imshow(mask, cmap='gray')
-    axes[i, 1].set_title(f'Ground Truth {i + 1}')
-    axes[i, 1].axis('off')
+    axes[i, 1].imshow(mask_tensor.cpu(), cmap='gray')
+    axes[i, 1].set_title("Ground Truth")
+    axes[i, 1].axis("off")
 
     axes[i, 2].imshow(pred, cmap='gray')
-    axes[i, 2].set_title(f'Predicted {i + 1}')
-    axes[i, 2].axis('off')
+    axes[i, 2].set_title("Prediction")
+    axes[i, 2].axis("off")
+
+    print(f"Inferred and visualised: {filename}")
 
 plt.tight_layout()
-plt.savefig("UNET.png")
+plt.savefig("UNET_FIRST5_IMAGES.png")
 plt.show()
+print("[INFO] Results saved to UNET_FIRST5_IMAGES.png")
