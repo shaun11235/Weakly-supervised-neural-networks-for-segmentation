@@ -115,4 +115,4 @@ for i, filename in enumerate(first5_filenames):
 plt.tight_layout()
 plt.savefig("UNET_FIRST5_IMAGES.png")
 plt.show()
-print("[INFO] Results saved to UNET_FIRST5_IMAGES.png")
+print("Results saved to UNET_FIRST5_IMAGES.png")
