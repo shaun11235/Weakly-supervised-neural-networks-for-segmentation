@@ -7,10 +7,9 @@ import xml.etree.ElementTree as ET
 script_dir = os.path.dirname(os.path.abspath(__file__))
 image_dir = os.path.join(script_dir, "oxford-iiit-pet", "images")
 xml_dir = os.path.join(script_dir, "oxford-iiit-pet", "annotations", "xmls")
-bbox_txt = os.path.join(script_dir, "trained_models", "trimaps_bbox.txt")
+bbox_txt = os.path.join(script_dir, "trained_model", "trimaps_bbox.txt")
 output_dir = os.path.join(script_dir, "plots", "bbox_heatmaps")
 
-os.makedirs(output_dir, exist_ok=True)
 
 bbox_lines = []
 
@@ -39,7 +38,7 @@ with open(bbox_txt, "w") as f:
     for line in bbox_lines:
         f.write(line + "\n")
 
-print(f"✅ Saved {len(bbox_lines)} bounding boxes to {bbox_txt}")
+print(f" Saved {len(bbox_lines)} bounding boxes to {bbox_txt}")
 
 # ========== STEP 2: Generate pseudo CAM heatmaps from bbox ==========
 # Load bbox file into a dictionary
@@ -91,4 +90,4 @@ for i, (filename, bbox) in enumerate(bbox_dict.items()):
     base = os.path.splitext(filename)[0]
     blended.save(os.path.join(output_dir, f"{base}_blend.jpg"))
 
-print("✅ All pseudo CAM heatmaps have been generated!")
+print(" All pseudo CAM heatmaps have been generated!")
