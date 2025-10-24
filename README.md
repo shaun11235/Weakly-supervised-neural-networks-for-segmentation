@@ -1,58 +1,349 @@
-# COMP0197 Coursework 2
-## Environment setup
-The required packages are listed in the file `requirements.txt`. Follow the instructions to make sure that your environment is **reproducible** by everyone else in the group.  
-1. Open a terminal and use `cd` to navigate to the root directory (where you want the files for this coursework to be in). 
-2. Run the command `git clone <insert the URL of the repository>` (don't include the `<>`).
- ![alt text](image.png)
-3. Run the command `conda env create -f env/environment.yml`.  
+# Weakly Supervised Semantic Segmentation on Oxford-IIIT Pet Dataset
 
-Now your environment should be ready, here are several commands that might be useful.  
-- `conda info --envs`: to see all available environments, youshould see `comp0197-cw2-pt` among them.  
-- `conda activate comp0197-cw2-pt`: activates the environment in terminal.
-- `conda init` & `source activate`: If you cannot activate the environment try run these two commands first.
+---
 
-Want to add other packages? Add the names of them in `requirements.txt` and run the command `conda env update -f env/environment.yml --prune`(`prune` removes the packages which are not listed in `requirements.txt`).
+## 📘 1. Overview
+This project explores **semantic segmentation** on the **Oxford-IIIT Pet dataset** using **weakly supervised approaches**.  
+We use **image-level labels** as limited supervision signals to generate heatmaps and convert them into pseudo segmentation masks for downstream training.  
+We also train a **fully supervised baseline model** for comparison and experiment with **bounding box–based weak supervision** to generate alternative pseudo labels.
 
-## GitHub 101
+---
 
-Here are several commands that you will need.  
+## ⚙️ 2. Setup
 
-- `git clone`: Clones a remote repository to your local machine.  
-- `git status`: Shows the current state of your working directory.  
+### Requirements
+- Python 3.x  
+- PyTorch  
+- torchvision  
+- numpy  
+- PIL (Pillow)  
+- matplotlib  
+- skimage  
+- tarfile  
+- urllib.request  
+- os  
+- random  
+- xml.etree.ElementTree  
+- scipy  
 
-In most cases, following these steps should be enough for you to upload your work.  
+### Extra packages
+- matplotlib  
+- skimage  
+- scipy  
 
-- `git pull`: Fetches and merges changes from the remote repository into your current branch.  
-- `git add`: Adds file changes to the staging area, preparing them for a commit.  
-- `git commit -m "Your commit message, EXPLAIN WHAT YOU HAVE DONE HERE"`: Commits the staged changes to the local repository with a descriptive message.  
-- `git push`: Pushes your local commits to the remote repository.  
+---
+
+## 📂 3. Project Files Description
+
+### `download_pet_dataset.py`
+Automates downloading and extracting the Oxford-IIIT Pet dataset.  
+Creates `oxford-iiit-pet/` directory, downloads image and annotation archives, and extracts them locally.
+
+### `cam_training_model.py`
+Implements a **ResNet-18** classifier training pipeline.  
+- Loads image-level labels and applies preprocessing.  
+- Trains for **20 epochs** with CrossEntropyLoss and Adam optimizer.  
+- Saves weights in `trained_model/epoch/`.
+
+### `cam_heatmap.py`
+Generates **Class Activation Maps (CAMs)** for all images:  
+- Loads the best trained ResNet-18 model.  
+- Extracts feature maps via a forward hook.  
+- Generates CAMs and saves them in `cam_heatmaps/`.
+
+### `bbox_heatmap.py`
+Generates **bounding box–based heatmaps** in two stages:  
+1. Parses XML annotations to extract bounding boxes → saves as `trimaps_bbox.txt`.  
+2. Applies Gaussian-based heatmaps to visualize and save in `bbox_heatmaps/`.
+
+### `generate_all_cams.py`
+Automates CAM generation for 20 ResNet models.  
+Saves outputs in `plots/cam_all_models/`.
+
+### `generate_all_binary.py`
+Converts CAM heatmaps into **binary masks** with thresholds (0.1–0.9).  
+Stores results in `results/binary_mask_all/`.
+
+### `evaluate_all_model.py`
+Evaluates **mIoU (mean Intersection over Union)** for all binary masks.  
+Outputs results to `miou_results_all.csv`.
+
+### `cam_affinity_1.py` / `bbox_affinity_1.py`
+Converts CAM or bounding box heatmaps into binary pseudo masks for AffinityNet training.  
+Outputs stored in:
+- `plots/binary_mask_cam/`  
+- `plots/binary_mask_bbox/`
+
+### `cam_affinity_2.py` / `bbox_affinity_2.py`
+Trains **AffinityNet** to propagate pseudo labels.  
+Saves models as:
+- `trained_model/affinitynet_cam.pth`  
+- `trained_model/affinitynet_bbox.pth`
+
+### `cam_affinity_3.py` / `bbox_affinity_3.py`
+Generates **refined masks** using trained AffinityNet.  
+Outputs stored in:
+- `plots/refined_masks_cam/`  
+- `plots/refined_masks_bbox/`
+
+### `cam_affinity_4.py` / `bbox_affinity_4.py`
+Evaluates segmentation quality (mIoU results displayed in terminal).
+
+### `unet.py`
+Defines the **SimpleUNet** model, **FocalLoss**, and `compute_miou()` function.  
+Includes full training and evaluation pipeline.
+
+### `train_unet.py`
+Implements U-Net training:  
+- Custom dataset and preprocessing.  
+- Focal loss + Adam optimizer.  
+- Periodic evaluation with mIoU.  
+- Saves `unet_model.pth`.
+
+### `test_unet.py`
+Evaluates pretrained U-Net model:  
+- Loads model and test data.  
+- Computes overall mIoU.  
+- Visualizes predicted vs ground truth masks.  
+- Saves comparison figures.
+
+---
+
+## 🧩 4. Model Descriptions
+
+### **Model 1: CAM + AffinityNet**
+1. Generate heatmaps using CAM.  
+2. Convert heatmaps to binary masks.  
+3. Refine masks via AffinityNet propagation.  
+4. Evaluate pseudo labels using mIoU.
+
+---
+
+### **Model 0: Hyperparameter Selection**
+1. Generate 20 CAM models (1–20 epochs).  
+2. Convert to binary masks (thresholds 0.1–0.9).  
+3. Compute 180 mIoU results and save `.csv` summary.
+
+---
+
+### **Model 2: Fully Supervised U-Net**
+- Train U-Net using Oxford-IIIT Pet ground truth masks.  
+- Focal loss + Adam optimizer for class balancing.  
+- Evaluate with mIoU and save model as `unet_model.pth`.
+
+---
+
+### **Model 3: Bounding Box + AffinityNet**
+1. Generate heatmaps using bounding boxes.  
+2. Convert to binary masks.  
+3. Refine using AffinityNet.  
+4. Evaluate mIoU.
+
+---
+
+## 🗂️ 5. Directory Structure
+
+```bash
+project_root/
+├── download_pet_dataset.py
+├── cam_training_model.py
+├── bbox_heatmap.py
+├── cam_heatmap.py
+├── generate_all_binary.py
+├── generate_all_cams.py
+├── evaluate_all_model.py
+├── cam_affinity_1/
+├── cam_affinity_2/
+├── cam_affinity_3/
+├── cam_affinity_4/
+├── bbox_affinity_1/
+├── bbox_affinity_2/
+├── bbox_affinity_3/
+├── bbox_affinity_4/
+├── unet.py
+├── train_unet.py
+├── test_unet.py
+│
+├── results/
+│   └── binary_mask_all/
+│
+├── trained_model/
+│   ├── affinitynet_bbox.pth
+│   ├── affinitynet_cam.pth
+│   ├── resnet_pet_epoch1–20.pth
+│   ├── trimaps_bbox.txt
+│   └── unet_model.pth
+│
+├── plots/
+│   ├── bbox_heatmaps/
+│   ├── cam_heatmaps/
+│   ├── binary_mask_cam/
+│   ├── refined_masks_cam/
+│   ├── binary_mask_bbox/
+│   ├── refined_masks_bbox/
+│   ├── cam_all_models/
+│   └── UNET.png
+│
+└── oxford-iiit-pet/
+    ├── images/
+    └── annotations/
+        ├── trimaps/
+        └── xmls/
+```
+
+## 🚀 6. Simplified Steps to Run
+
+🔹 Option A: Using Pretrained Models
 
 
-There are many more commands available (`branch`, `checkout`, etc.), check out https://training.github.com/downloads/zh_CN/github-git-cheat-sheet/, it should contain everything you need.  
-Still confused? https://chatgpt.com/ would be happy to help.
+Step 1: Download pretrained models
+OneDrive link:
+https://1drv.ms/f/c/e7566ddc0b2c213d/EuKFxeWPT9hDisunjivQR54BJrzcJHybY5j5r-4Bpz9rNQ?e=8pYI7o
 
-## Few tips
-- **Follow PEP8 Guidelines**:  
-Adhere to the PEP8 style guide to ensure your Python code is clean, readable, and consistent. This makes it easier for everyone to understand and collaborate on the project.
+Place the `trained_model` folder (with all model files)
+parallel to the `oxford-iiit-pet` dataset folder.
 
-- **Write Clear Commit Messages**:  
-Use descriptive commit messages that explain what changes were made and why. Aim for clarity so that others (and your future self) can easily follow the history of your changes.
 
-- **Keep Commits Focused**:  
-Try to make small, focused commits rather than one large commit that covers many changes. This helps with debugging and understanding the evolution of the project.
+----------------------------------------------------
+⚙️ Model 1: CAM + AffinityNet
+----------------------------------------------------
+Models required:
+resnet_pet_epoch12.pth
+affinitynet_cam.pth
 
-- **Regularly Pull Changes**:  
-Frequently pull from the remote repository to ensure your local branch is up-to-date, which minimizes merge conflicts when you push your changes.
+Run sequence:
+python download_pet_dataset.py
+python cam_heatmap.py
+python cam_affinity_1.py
+python cam_affinity_3.py
+python cam_affinity_4.py
 
-- **Document Your Code**:  
-Use comments and update the README file as needed to explain any non-obvious parts of your code or new features. Good documentation is essential for team collaboration and future maintenance.
+Results:
+cam_heatmaps/
+binary_mask_cam/
+refined_masks_cam/
+mIoU
 
-## Dataset
-Make sure that the dataset file paths look like this:  
-`dataset/`  
-`└── oxford-iiit-pet/`  
-`    ├── annotations/`  
-`    ├── images/`  
-`    └── test.jpg`  
 
-Do not push the dataset to GitHub.  
+----------------------------------------------------
+⚙️ Model 0: Hyperparameter Selection
+----------------------------------------------------
+Checkpoints:
+resnet_pet_epoch1.pth → resnet_pet_epoch20.pth
+
+Run sequence:
+python download_pet_dataset.py
+python generate_all_cams.py
+python generate_all_binary.py
+python evaluate_all_model.py
+
+Results:
+plots/cam_all_models/
+results/binary_mask_all/
+mIoU
+
+
+----------------------------------------------------
+⚙️ Model 2: Fully Supervised U-Net
+----------------------------------------------------
+Model required:
+unet_model.pth
+
+Run sequence:
+python download_pet_dataset.py
+python unet.py
+python train_unet.py
+python test_unet.py
+
+Results:
+plots/UNET.png
+trained_model/unet_model.pth
+mIoU
+
+
+----------------------------------------------------
+⚙️ Model 3: Bounding Box + AffinityNet
+----------------------------------------------------
+Models required:
+resnet_pet_epoch12.pth
+affinitynet_bbox.pth
+
+Run sequence:
+python download_pet_dataset.py
+python bbox_affinity_1.py
+python bbox_affinity_3.py
+python bbox_affinity_4.py
+
+Results:
+bbox_heatmaps/
+binary_mask_bbox/
+refined_masks_bbox/
+mIoU
+
+
+🔹 Option B: Train from Scratch
+
+
+----------------------------------------------------
+⚙️ Model 1: CAM + AffinityNet
+----------------------------------------------------
+Run sequence:
+python download_pet_dataset.py
+python cam_training_model.py
+python cam_heatmap.py
+python cam_affinity_1.py
+python cam_affinity_2.py
+python cam_affinity_3.py
+python cam_affinity_4.py
+
+Results:
+cam_heatmaps/
+binary_mask_cam/
+refined_masks_cam/
+mIoU
+
+
+----------------------------------------------------
+⚙️ Model 0: Hyperparameter Selection (Alternative)
+----------------------------------------------------
+Run sequence:
+python download_pet_dataset.py
+python generate_all_cams.py
+python generate_all_binary.py
+python evaluate_all_model.py
+
+Results:
+plots/cam_all_models/
+results/binary_mask_all/
+mIoU
+
+
+----------------------------------------------------
+⚙️ Model 2: Fully Supervised U-Net
+----------------------------------------------------
+Run sequence:
+python unet.py
+python train_unet.py
+python test_unet.py
+
+Results:
+plots/UNET.png
+trained_model/unet_model.pth
+mIoU
+
+
+----------------------------------------------------
+⚙️ Model 3: Bounding Box + AffinityNet
+----------------------------------------------------
+Run sequence:
+python bbox_heatmap.py
+python bbox_affinity_1.py
+python bbox_affinity_2.py
+python bbox_affinity_3.py
+python bbox_affinity_4.py
+
+Results:
+bbox_heatmaps/
+binary_mask_bbox/
+refined_masks_bbox/
+mIoU
